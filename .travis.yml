@@ -1,0 +1,37 @@
+dist: trusty
+sudo: false
+
+language: go
+go:
+- 1.11.1
+
+git:
+  depth: 1
+
+stages:
+- test
+- name: deploy
+  if: tag IS present
+
+jobs:
+  include:
+  - stage: test
+    script: make vendor-status
+  - script:
+    - make tools
+    - make lint
+  - script: make test
+  - stage: deploy
+    script: make compile
+    before_deploy:
+    - chmod +x dist/*
+    - test "`dist/clon_linux_amd64 version`" == "clon ${TRAVIS_TAG}"
+    deploy:
+      provider: releases
+      api_key:
+        secure: tz6e7OR9D1K/OvQYC/ROSK7vfcyp9T/x8uTURruSSNXfjIJhnfHdG+Zz8GR7Q97a+9UVfejWBLwya6hnyHOsQU0VSMcWL+fnw99ai47sUEvgpXxsBAVuZEhmjlqXjm3z2/ODfJdjXTCTBDRF4qSBldAP2eR5QT1fXmvCn19bq3IwhUx4aFb0ROAEwXPrTE6x/iB9PPWo9g5anYH6wjt6zrFEPVqZ3H4tyTX3/RP0Wkagbds1DulJrfFSM/ktaQ3H/IF1pcbhBlNCGouPkrJ1aI/17y8uGqcZendQiqI+S7lXwe1Qx7C3MEQ+XzwzOgdcye+C72OZt9pt7gxAGt8Ig1McmuHa7L9Bnak85mJgGIxTra55oZzOyVS5/6ab+ZI+Kdv1bfHdVtoP/PPFsawnx7iqmr1rSpJsMooDdeTF5JXcWtTwLDS+r//LzpeMdujHdR3Sc/OKq8K1AcQWIW0T5QqmQnNNbkmCwM9hEVfyc86qVSFwEHS4XLF9YTyGL047dQ9oUTrl55l3Xajx4JNm0vxo0X6SUFnzI4iTTFPcygu3Z8A/D8Sw+lWP8DT62EVBBw3bEMnSbx3tLUqYKZr13bIwb50rRn19y/2D1sMpA04VAkjVct2iT5lVT6ZtBr7Eu7zyT2Bj1X0tRJgOd2s1Xur4ataMOjBysqWu6O9WMbU=
+      skip_cleanup: true
+      file_glob: true
+      file: dist/*
+      on:
+        tags: true
