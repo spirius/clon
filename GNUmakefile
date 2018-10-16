@@ -15,7 +15,7 @@ coverage: ## run coverage tests for coveralls
 	@go get github.com/mattn/goveralls github.com/modocache/gover
 	@go list -f '{{if len .TestGoFiles}}"go test -v -race -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
 	@gover
-	@goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
+	@goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $(COVERALLS_TOKEN)
 
 tools: ## install tools
 	@go get -u github.com/mitchellh/gox
