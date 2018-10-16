@@ -12,9 +12,9 @@ test: ## run tests
 	@go test -v -race ./...
 
 coverage: ## run coverage tests for coveralls
-	@go get golang.org/x/tools/cmd/cover
-	@go get github.com/mattn/goveralls
-	@go test -v -covermode=count -coverprofile=coverage.out ./...
+	@go get code.google.com/p/go.tools/cmd/cover github.com/mattn/goveralls github.com/modocache/gover
+	@go list -f '{{if len .TestGoFiles}}"go test -v -race -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
+	@gover
 	@goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
 
 tools: ## install tools

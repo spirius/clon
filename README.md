@@ -83,7 +83,7 @@ This template usually includes some S3 buckets for intermediate file storage and
 This stack **must** contain `Bucket` output, which holds the name of that bucket for temporary storage.
 
 ### Example of Bootstrap
-[![asciicast](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY.png?cols=400)](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY?cols=400 | width=400)
+<a href="https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY?cols=400" target="_blank"><img src="https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY.png" width="600"/></a>
 
 ## Files
 Files are synced to Dst S3 buckets and location information is available in templates. Files are exposed to template as following structure: 
