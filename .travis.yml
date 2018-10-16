@@ -13,6 +13,9 @@ stages:
 - name: deploy
   if: tag IS present
 
+env:
+- secure: GdjyagQF6+eCXAXFL5GegpwzxDuuMIiZDdAqG7DWMt54VhEnVFVl3Gw3Kxgx2yFYgvVmAzTW8g84obalN6rCpx33VsCTlG1nM3f5UyYoAudy6TEx5IkCZ4QpmTfNILIe0pkm7/p0O8fSEXEo9f3QaoIHarmWLlVmXXnqWUhKDeBfFMXbDzhuBFwSS3HKtNdu6WIPtLcOXAift5Y24dHqWkBnAM+IdECIBb6PZUNNggVydqlBxdp+yKupk3tZnIIZlKSGvxlclnEj00tPm2KIlUCAo2BnVMJdl6uDDOlw7HMoVqh93eYW4m2zM0bwrMIAgO8b4GB7n0/E5FD68lMzEzMQIcWC27gPUWQhT5aQoSWLHVDaejjLWMtULy2NBYAQTkdvdAm/8whSLgGDpfFrGR5xVlgJTSUtn7BN7iKXg2C0xkjoRvG1YSrBDwQ0rjSYzqhptjvLITEio0YEyJP67UzM3nAQsKSwefWLpiP8ISwG8BETS3DkgfaEEUjbx8pFWAXpGIeuBzNwjekDFaTNKImHL09k3Rtny3Mx2lV6yjmNu/YuaBMNmsC2ynHjjOlzTvpFD5QvquuHT0nqncTo8yBZR4EkDKsymI/hl+iATkXpZsEezDtAcE1a6AC5j8rRn4BYz1syDgzQ0MMe5Gu//rZNAyJKGpZRVkiTs1wNEw0=
+
 jobs:
   include:
   - stage: test
@@ -20,7 +23,7 @@ jobs:
   - script:
     - make tools
     - make lint
-  - script: make test
+  - script: make coverage
   - stage: deploy
     script: make compile
     before_deploy:

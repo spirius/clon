@@ -1,5 +1,8 @@
 **clon** (**cl**oudformati**on**) is a AWS CloudFormation template and stack management tool.
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/spirius/clon)](https://goreportcard.com/report/github.com/spirius/clon)
+[![Build Status](https://travis-ci.com/spirius/clon.svg?branch=master)](https://travis-ci.com/spirius/clon)
+
 # Table of conent
 
 - [Overview](#overview)
@@ -80,7 +83,7 @@ This template usually includes some S3 buckets for intermediate file storage and
 This stack **must** contain `Bucket` output, which holds the name of that bucket for temporary storage.
 
 ### Example of Bootstrap
-[![asciicast](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY.png)](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY)
+[![asciicast](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY.png?cols=400)](https://asciinema.org/a/H7xdtZRFvRSV6XQMjk21fN9TY?cols=400 | width=400)
 
 ## Files
 Files are synced to Dst S3 buckets and location information is available in templates. Files are exposed to template as following structure: 

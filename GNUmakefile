@@ -11,6 +11,12 @@ lint: ## run gometalinter
 test: ## run tests
 	@go test -v -race ./...
 
+coverage: ## run coverage tests for coveralls
+	@go get golang.org/x/tools/cmd/cover
+	@go get github.com/mattn/goveralls
+	@go test -v -covermode=count -coverprofile=coverage.out ./...
+	@goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
+
 tools: ## install tools
 	@go get -u github.com/mitchellh/gox
 	@go get -u github.com/alecthomas/gometalinter
