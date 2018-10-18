@@ -291,15 +291,15 @@ func TestStackEvents_newStackEventData(t *testing.T) {
 	require := require.New(t)
 
 	var (
-		eventID            = "11111"
-		logicalResourceID  = "22222"
-		physicalResourceID = "33333"
-		resourceProperties = "44444"
-		status             = "55555"
-		statusReason       = "66666"
-		resourceType       = "77777"
-		stackID            = "88888"
-		stackName          = "99999"
+		eventID              = "11111"
+		logicalResourceID    = "22222"
+		physicalResourceID   = "33333"
+		resourceProperties   = "44444"
+		resourceStatus       = "55555"
+		resourceStatusReason = "66666"
+		resourceType         = "77777"
+		stackID              = "88888"
+		stackName            = "99999"
 	)
 
 	se := newStackEventData(&cloudformation.StackEvent{
@@ -307,8 +307,8 @@ func TestStackEvents_newStackEventData(t *testing.T) {
 		LogicalResourceId:    aws.String(logicalResourceID),
 		PhysicalResourceId:   aws.String(physicalResourceID),
 		ResourceProperties:   aws.String(resourceProperties),
-		ResourceStatus:       aws.String(status),
-		ResourceStatusReason: aws.String(statusReason),
+		ResourceStatus:       aws.String(resourceStatus),
+		ResourceStatusReason: aws.String(resourceStatusReason),
 		ResourceType:         aws.String(resourceType),
 		StackId:              aws.String(stackID),
 		StackName:            aws.String(stackName),
@@ -318,8 +318,8 @@ func TestStackEvents_newStackEventData(t *testing.T) {
 	require.Equal(logicalResourceID, se.LogicalResourceID)
 	require.Equal(physicalResourceID, se.PhysicalResourceID)
 	require.Equal(resourceProperties, se.ResourceProperties)
-	require.Equal(status, se.Status)
-	require.Equal(statusReason, se.StatusReason)
+	require.Equal(resourceStatus, se.ResourceStatus)
+	require.Equal(resourceStatusReason, se.ResourceStatusReason)
 	require.Equal(resourceType, se.ResourceType)
 	require.Equal(stackID, se.StackID)
 	require.Equal(stackName, se.StackName)

@@ -17,7 +17,7 @@ type stackCmdHandler struct {
 func newStackCmdHandler(config clon.Config) (*stackCmdHandler, error) {
 	s := &stackCmdHandler{}
 	config.Bootstrap.Name = bootstrapStackName
-	config.Stacks = append(config.Stacks, config.Bootstrap)
+	config.Stacks = append([]clon.StackConfig{config.Bootstrap}, config.Stacks...)
 	sm, err := clon.NewStackManager(config)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot create clon")
@@ -53,33 +53,30 @@ func (s *stackCmdHandler) status(name string) (output, error) {
 	return newOutput(stack), nil
 }
 
-func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, error) {
+func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, bool, error) {
 	plan, err := s.sm.Plan(name)
 	if err != nil {
-		return nil, errors.Annotatef(err, "cannot plan stack '%s'", name)
+		return nil, false, errors.Annotatef(err, "cannot plan stack '%s'", name)
 	}
 	stack := plan.Stack
 	if plan.HasChange {
 		newOutput(plan).Output(os.Stderr)
 		if err = askForConfirmation("Do you want to apply these changes on stack?"); err != nil {
-			return nil, errors.Annotatef(err, "changes are not approved")
+			return nil, false, errors.Annotatef(err, "changes are not approved")
 		}
 		stack, err = s.sm.Execute(name, plan.ID)
-		if stack != nil {
-			newOutput(stack).Output(os.Stderr)
-		}
 		if err != nil {
-			return nil, errors.Annotatef(err, "execution of stack '%s' failed", name)
+			return nil, false, errors.Annotatef(err, "execution of stack '%s' failed", name)
 		}
 	}
-	return stack, nil
+	return stack, plan.HasChange, nil
 }
 
 func (s *stackCmdHandler) deploy(name string) (output, error) {
 	if name != bootstrapStackName {
 		s.init()
 	}
-	stack, err := s.deployStack(name)
+	stack, _, err := s.deployStack(name)
 	if err != nil {
 		return nil, errors.Annotatef(err, "deployment of stack '%s' failed", err)
 	}
@@ -89,9 +86,13 @@ func (s *stackCmdHandler) deploy(name string) (output, error) {
 // init initialized the stack, which is equivavlent of planing and
 // if needed deploying the bootstrap stack.
 func (s *stackCmdHandler) init() (output, error) {
-	stack, err := s.deployStack(bootstrapStackName)
+	stack, hasChange, err := s.deployStack(bootstrapStackName)
 	if err != nil {
 		return nil, errors.Annotatef(err, "initialization failed")
+	}
+
+	if hasChange {
+		newOutput(stack).Output(os.Stderr)
 	}
 
 	bucket, ok := stack.Outputs["Bucket"]

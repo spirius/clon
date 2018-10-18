@@ -87,7 +87,7 @@ func newPlan(cs *cfn.ChangeSetData, stack *StackData) (*Plan, error) {
 		Parameters: newDiffStringMap(stack.Parameters, cs.StackData.Parameters),
 	}
 
-	p.HasChange = !p.RoleARN.IsEqual() || p.Parameters.HasChange() || len(p.ChangeSet.Changes) > 0
+	p.HasChange = p.Parameters.HasChange() || len(p.ChangeSet.Changes) > 0
 
 	return p, nil
 }

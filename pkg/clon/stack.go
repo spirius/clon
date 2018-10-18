@@ -2,13 +2,17 @@ package clon
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spirius/clon/internal/pkg/cfn"
 	"github.com/spirius/clon/internal/pkg/closer"
 
 	"github.com/juju/errors"
 )
+
+const awsCloudFormationStack = "AWS::CloudFormation::Stack"
 
 // StackData represents the stack data.
 type StackData struct {
@@ -21,6 +25,9 @@ type stack struct {
 	configName string
 	sm         *StackManager
 	stack      *cfn.Stack
+
+	nestedStackLock     sync.Mutex
+	nestedStackTracking map[string]*closer.Closer
 }
 
 func newStack(sm *StackManager, stackName, configName string) (*stack, error) {
@@ -33,12 +40,14 @@ func newStack(sm *StackManager, stackName, configName string) (*stack, error) {
 		configName: configName,
 		stack:      cfnStack,
 		sm:         sm,
+
+		nestedStackTracking: make(map[string]*closer.Closer),
 	}
 	return s, nil
 }
 
 func (s *stack) exists() bool {
-	return s.stack == nil || s.stack.Data().Status == cfn.StackStatusNotFound
+	return s.stack != nil && s.stack.Data().Status != cfn.StackStatusNotFound
 }
 
 func (s *stack) stackData() *StackData {
@@ -94,14 +103,72 @@ func (s *stack) plan(stackData *StackData) (*cfn.ChangeSet, error) {
 	return cs, err
 }
 
+func (s *stack) verifyNestedStackTracking(e *cfn.StackEventData, parentCl *closer.Closer) {
+	stackID := e.PhysicalResourceID
+
+	if stackID == "" || e.LogicalResourceID == s.name || e.StackID == s.name {
+		return
+	}
+
+	s.nestedStackLock.Lock()
+	defer s.nestedStackLock.Unlock()
+	cl, ok := s.nestedStackTracking[stackID]
+
+	if e.IsComplete() {
+		if ok {
+			log.Debugf("removing nested stack tracking for stack '%s'", stackID)
+			cl.Close(nil)
+			delete(s.nestedStackTracking, stackID)
+		}
+	}
+
+	if !ok {
+		log.Debugf("adding nested stack tracking for stack '%s'", stackID)
+		cl := parentCl.Child()
+		s.nestedStackTracking[stackID] = cl
+		err := s.trackStackEvents(stackID, cl)
+		if err != nil {
+			log.Errorf("nested stack '%s' tracking failed: %s", stackID, err)
+		}
+	}
+}
+
+func (s *stack) trackStackEvents(name string, cl *closer.Closer) error {
+	log.Debugf("starting stack events tracking for stack '%s'", name)
+	se, err := cfn.NewStackEvents(s.sm.awsClient.cfnconn, name)
+
+	if err != nil {
+		return errors.Annotatef(err, "cannot track '%s'", name)
+	}
+
+	se.Wait(cfn.StackEventsWaitConfig{
+		Callback: func(stackEvent *cfn.StackEventData) (bool, error) {
+			if stackEvent.ResourceType == awsCloudFormationStack {
+				s.verifyNestedStackTracking(stackEvent, cl)
+			}
+			s.sm.emit(stackEvent)
+			return true, nil
+		},
+		Closer: cl,
+	})
+
+	return nil
+}
+
 func (s *stack) trackUpdates(fn func(stack *cfn.StackData) (bool, error)) *closer.Closer {
+	log.Debugf("starting stack update tracking for stack '%s'", s.name)
 	cl := closer.New()
 
+	lastStatus := ""
 	s.stack.Wait(cfn.StackWaitConfig{
 		Callback: func(stack *cfn.StackData) (bool, error) {
+			log.Debugf("received update for stack '%s', status %s", stack.Name, stack.Status)
 			retry, err := fn(stack)
 			if retry {
-				s.sm.emit(s.newStackData(stack))
+				if stack.Status != lastStatus {
+					s.sm.emit(s.newStackData(stack))
+					lastStatus = stack.Status
+				}
 			}
 			return retry, errors.Trace(err)
 		},
@@ -110,18 +177,10 @@ func (s *stack) trackUpdates(fn func(stack *cfn.StackData) (bool, error)) *close
 		CloseOnEnd:   true,
 	})
 
-	se, err := cfn.NewStackEvents(s.sm.awsClient.cfnconn, s.name)
+	err := s.trackStackEvents(s.name, &cl)
 	if err != nil {
-		return &cl
+		log.Errorf("cannot track stack events: %s", err)
 	}
-
-	se.Wait(cfn.StackEventsWaitConfig{
-		Callback: func(stackEvent *cfn.StackEventData) (bool, error) {
-			s.sm.emit(stackEvent)
-			return true, nil
-		},
-		Closer: &cl,
-	})
 
 	return &cl
 }

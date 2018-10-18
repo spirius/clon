@@ -3,7 +3,6 @@ package clon
 import (
 	"fmt"
 	"io/ioutil"
-	"sort"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/juju/errors"
@@ -18,6 +17,7 @@ type StackManager struct {
 
 	awsClient *awsClient
 
+	stackOrder   []string
 	stacks       map[string]*stack
 	stackConfigs map[string]*StackConfig
 
@@ -216,12 +216,7 @@ func (sm *StackManager) SetBucket(bucket string) {
 // List returns list of stacks.
 func (sm *StackManager) List() ([]*StackData, error) {
 	res := make([]*StackData, 0, len(sm.stacks))
-	names := make([]string, 0, len(sm.stacks))
-	for k := range sm.stacks {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range sm.stackOrder {
 		res = append(res, sm.stacks[name].stackData())
 	}
 
@@ -297,12 +292,13 @@ func (sm *StackManager) SyncFiles() error {
 func NewStackManager(config Config) (*StackManager, error) {
 	sm := &StackManager{
 		name:         config.Name,
-		stacks:       make(map[string]*stack),
-		stackConfigs: make(map[string]*StackConfig),
+		stackOrder:   make([]string, 0, len(config.Stacks)),
+		stacks:       make(map[string]*stack, len(config.Stacks)),
+		stackConfigs: make(map[string]*StackConfig, len(config.Stacks)),
 		emit:         func(interface{}) {},
 
-		vars:  make(map[string]string),
-		files: make(map[string]*s3file.File),
+		vars:  make(map[string]string, len(config.Variables)),
+		files: make(map[string]*s3file.File, len(config.Files)),
 	}
 	awsClient, err := newAWSClient()
 	if err != nil {
@@ -321,6 +317,7 @@ func NewStackManager(config Config) (*StackManager, error) {
 	sm.fileConfigs = config.Files
 
 	for _, stackConfig := range config.Stacks {
+		sm.stackOrder = append(sm.stackOrder, stackConfig.Name)
 		if err = sm.addStack(stackConfig.Name, stackConfig); err != nil {
 			return nil, errors.Annotatef(err, "cannot add %s stack", stackConfig.Name)
 		}

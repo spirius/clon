@@ -1,6 +1,7 @@
 package cfn
 
 import (
+	"strings"
 	"time"
 
 	"github.com/spirius/clon/internal/pkg/closer"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/juju/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const stackEventsWaitInterval = 2 * time.Second
@@ -16,28 +18,34 @@ const stackEventsWaitInterval = 2 * time.Second
 // StackEventData is the data structure
 // containing stack event information.
 type StackEventData struct {
-	EventID            string
-	LogicalResourceID  string
-	PhysicalResourceID string
-	ResourceProperties string
-	Status             string
-	StatusReason       string
-	ResourceType       string
-	StackID            string
-	StackName          string
+	EventID              string
+	LogicalResourceID    string
+	PhysicalResourceID   string
+	ResourceProperties   string
+	ResourceStatus       string
+	ResourceStatusReason string
+	ResourceType         string
+	StackID              string
+	StackName            string
+}
+
+// IsComplete indicates if resource in event is in
+// completed state.
+func (c StackEventData) IsComplete() bool {
+	return strings.HasSuffix(c.ResourceStatus, "_COMPLETE")
 }
 
 func newStackEventData(in *cloudformation.StackEvent) *StackEventData {
 	return &StackEventData{
-		EventID:            aws.StringValue(in.EventId),
-		LogicalResourceID:  aws.StringValue(in.LogicalResourceId),
-		PhysicalResourceID: aws.StringValue(in.PhysicalResourceId),
-		ResourceProperties: aws.StringValue(in.ResourceProperties),
-		Status:             aws.StringValue(in.ResourceStatus),
-		StatusReason:       aws.StringValue(in.ResourceStatusReason),
-		ResourceType:       aws.StringValue(in.ResourceType),
-		StackID:            aws.StringValue(in.StackId),
-		StackName:          aws.StringValue(in.StackName),
+		EventID:              aws.StringValue(in.EventId),
+		LogicalResourceID:    aws.StringValue(in.LogicalResourceId),
+		PhysicalResourceID:   aws.StringValue(in.PhysicalResourceId),
+		ResourceProperties:   aws.StringValue(in.ResourceProperties),
+		ResourceStatus:       aws.StringValue(in.ResourceStatus),
+		ResourceStatusReason: aws.StringValue(in.ResourceStatusReason),
+		ResourceType:         aws.StringValue(in.ResourceType),
+		StackID:              aws.StringValue(in.StackId),
+		StackName:            aws.StringValue(in.StackName),
 	}
 }
 
@@ -91,6 +99,7 @@ func (se *StackEvents) getEvents() ([]*cloudformation.StackEvent, error) {
 }
 
 func (se *StackEvents) update(config StackEventsWaitConfig) error {
+	log.Debugf("starting stack events update for '%s'", se.name)
 loop:
 	for {
 		events, err := se.getEvents()

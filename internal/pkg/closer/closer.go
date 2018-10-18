@@ -7,10 +7,12 @@ import (
 // A Closer is an object, which can be used
 // for cancelation of multiple go routines.
 type Closer struct {
-	once sync.Once
-	lock sync.Mutex
-	ch   chan bool
-	err  error
+	once     sync.Once
+	lock     sync.Mutex
+	closed   bool
+	ch       chan bool
+	err      error
+	children map[*Closer]bool
 }
 
 // New creates new Closer.
@@ -32,6 +34,8 @@ func (c *Closer) Close(err error) {
 		defer c.lock.Unlock()
 		c.err = err
 		close(c.ch)
+		c.closed = true
+		c.propagate()
 	})
 }
 
@@ -50,4 +54,36 @@ func (c *Closer) Wait() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.err
+}
+
+func (c *Closer) propagate() {
+	for ch := range c.children {
+		ch.Close(c.err)
+	}
+}
+
+// Child creates new child closer.
+// When this Closer is closer, it will
+// close the child as well.
+func (c *Closer) Child() *Closer {
+	child := New()
+	c.AddChild(&child)
+	return &child
+}
+
+// AddChild add the child to this closer.
+func (c *Closer) AddChild(child *Closer) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.closed {
+		child.Close(c.err)
+		return
+	}
+	if c.children == nil {
+		c.children = make(map[*Closer]bool)
+	}
+	if _, ok := c.children[child]; ok {
+		return
+	}
+	c.children[child] = true
 }

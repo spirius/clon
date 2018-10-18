@@ -84,13 +84,14 @@ const outputStackLongTpl = outputStackShortTpl +
 {{- end }}
 `
 
-const outputStackStatusLineTpl = `{{ "info" | cyan }}: stack {{ .Name }} - {{ .Status | status }}{{ if .StatusReason }} - {{ .StatusReason }}{{ end }}
+const outputStackStatusLineTpl = `{{ "info" | cyan }}: {{ .Name }} - {{ .Status | status }}{{ if .StatusReason }} - {{ .StatusReason }}{{ end }}
 `
 
 const outputChangeSetStatusLineTpl = `{{ "info" | cyan }}: change set {{ .Name }} - {{ .Status | status }}{{ if .StatusReason }} - {{ .StatusReason }}{{ end }}
 `
 
-const outputStackEventStatusLineTpl = `{{ "info" | cyan }}: stack {{ .StackName }}, resource {{ .LogicalResourceID | hiwhite }} ({{ .ResourceType }}) - {{ .Status | status }}{{ if .StatusReason }} - {{ .StatusReason }}{{ end }}
+const outputStackEventStatusLineTpl = `{{ "info" | cyan }}: {{ .StackName }}, {{ .LogicalResourceID | hiwhite }} ({{ .ResourceType }}) - ` +
+	`{{ .ResourceStatus | status }}{{ if .ResourceStatusReason }} - {{ .ResourceStatusReason }}{{ end }}
 `
 
 func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
@@ -161,6 +162,7 @@ const outputPlanLongTpl = `
 {{ "ChangeSetId" | hiwhite }}:	{{ .ChangeSet.ID }}
 {{ "ChangeSetName" | hiwhite }}:	{{ .ChangeSet.Name }}
 {{ "ExecutionStatus" | hiwhite }}:	{{ .ChangeSet.ExecutionStatus | status }}
+{{ "RoleARN" | hiwhite }}:	{{ .RoleARN.String }}
 
 {{- if .Parameters.HasChange }}
 
