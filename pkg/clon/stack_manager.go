@@ -16,6 +16,7 @@ type StackManager struct {
 	name string
 
 	awsClient *awsClient
+	config    *Config
 
 	stackOrder   []string
 	stacks       map[string]*stack
@@ -170,7 +171,7 @@ func (sm *StackManager) Plan(name string) (*Plan, error) {
 	var plan *Plan
 	var err2 error
 	if cs != nil {
-		plan, err2 = newPlan(cs.Data(), stack.stackData())
+		plan, err2 = newPlan(cs.Data(), stack.stackData(), sm.config.IgnoreNestedUpdates)
 		if err2 != nil {
 			return nil, errors.Trace(err2)
 		}
@@ -198,7 +199,7 @@ func (sm *StackManager) GetPlan(name, planID string) (*Plan, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot execute change set '%s' for stack '%s'", changeSetID, name)
 	}
-	return newPlan(cs.Data(), stack.stackData())
+	return newPlan(cs.Data(), stack.stackData(), sm.config.IgnoreNestedUpdates)
 }
 
 // SetEventHandler sets the function which is called
@@ -291,6 +292,7 @@ func (sm *StackManager) SyncFiles() error {
 // reads stacks statuses.
 func NewStackManager(config Config) (*StackManager, error) {
 	sm := &StackManager{
+		config:       &config,
 		name:         config.Name,
 		stackOrder:   make([]string, 0, len(config.Stacks)),
 		stacks:       make(map[string]*stack, len(config.Stacks)),

@@ -24,6 +24,8 @@ type Config struct {
 
 	// Variables is the map of variables.
 	Variables map[string]string
+
+	IgnoreNestedUpdates bool
 }
 
 // StackConfig is the configuration of single stack.

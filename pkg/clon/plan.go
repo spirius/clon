@@ -7,6 +7,7 @@ import (
 
 	"github.com/juju/errors"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/spirius/clon/internal/pkg/cfn"
 )
@@ -72,7 +73,7 @@ type Plan struct {
 	HasChange  bool
 }
 
-func newPlan(cs *cfn.ChangeSetData, stack *StackData) (*Plan, error) {
+func newPlan(cs *cfn.ChangeSetData, stack *StackData, ignoreNestedUpdates bool) (*Plan, error) {
 	csARN, err := arn.Parse(cs.ID)
 
 	if err != nil {
@@ -87,7 +88,25 @@ func newPlan(cs *cfn.ChangeSetData, stack *StackData) (*Plan, error) {
 		Parameters: newDiffStringMap(stack.Parameters, cs.StackData.Parameters),
 	}
 
-	p.HasChange = p.Parameters.HasChange() || len(p.ChangeSet.Changes) > 0
+	// If Changes contain only Automatic updates on nested stacks,
+	// we consider it as no-change. We assume, that nested stack
+	// can contain changes only if input parameters or template URL are changed.
+	if ignoreNestedUpdates {
+		for _, c := range p.ChangeSet.Changes {
+			if len(c.Details) != 1 {
+				p.HasChange = true
+				break
+			}
+			d := c.Details[0]
+			if aws.StringValue(d.ChangeSource) != "Automatic" ||
+				aws.StringValue(d.Evaluation) != "Dynamic" ||
+				aws.StringValue(d.Target.Attribute) != "Properties" ||
+				aws.StringValue(d.Target.RequiresRecreation) != "Never" {
+				p.HasChange = true
+				break
+			}
+		}
+	}
 
 	return p, nil
 }

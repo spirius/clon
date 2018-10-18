@@ -54,6 +54,8 @@ var configFlags struct {
 
 	config         string
 	configOverride string
+
+	ignoreNestedUpdates bool
 }
 
 func stackResultHandler(out interface{}, err error) error {
@@ -80,6 +82,7 @@ var stackHandler *stackCmdHandler
 
 func decodeConfig(config *clon.Config, r io.Reader) error {
 	var err error
+	config.IgnoreNestedUpdates = configFlags.ignoreNestedUpdates
 	m := make(map[string]interface{})
 	if err = yaml.NewDecoder(r).Decode(m); err != nil {
 		return errors.Annotatef(err, "syntax error")
@@ -169,7 +172,7 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&configFlags.autoApprove, "auto-approve", "a", false, "Auto-approve changes")
 	rootCmd.AddCommand(initCmd)
 
-	rootCmd.AddCommand(&cobra.Command{
+	planCmd := &cobra.Command{
 		Use:   "plan {stack-name} [plan-id]",
 		Short: "Plan stack changes",
 		Long: `Plan the changes on stack using change set.
@@ -193,7 +196,15 @@ If plan-id is specified, displays previously planned change.
 			}
 			return stackResultHandler(res, errors.Annotatef(err, "error while planning"))
 		},
-	})
+	}
+	rootCmd.AddCommand(planCmd)
+	planCmd.PersistentFlags().BoolVarP(
+		&configFlags.ignoreNestedUpdates,
+		"ignore-nested-updates",
+		"",
+		true,
+		"Do not consider stack changed, if only nested stack automatics updates are performed",
+	)
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "execute {stack-name} {plan-id}",
@@ -234,6 +245,13 @@ This command requires interactive shell or -a flag to be specified.`,
 		},
 	}
 	deployCmd.PersistentFlags().BoolVarP(&configFlags.autoApprove, "auto-approve", "a", false, "Auto-approve changes")
+	deployCmd.PersistentFlags().BoolVarP(
+		&configFlags.ignoreNestedUpdates,
+		"ignore-nested-updates",
+		"",
+		true,
+		"Do not consider stack changed, if only nested stack automatics updates are performed",
+	)
 	rootCmd.AddCommand(deployCmd)
 
 	rootCmd.AddCommand(&cobra.Command{
