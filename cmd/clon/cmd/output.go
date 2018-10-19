@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/fatih/color"
 	"github.com/juju/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 func newOutput(in interface{}) output {
@@ -89,8 +90,7 @@ func (o *outputCommon) Output(w io.Writer) {
 
 func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 	if typ == outputTypeStatusLine {
-		fmt.Fprintf(w, "%s: stack status - %s [%s] %s\n",
-			color.CyanString("info"),
+		log.Infof("stack status - %s [%s] %s",
 			color.HiWhiteString(stack.Name),
 			outputStatus(stack.Status),
 			stack.StatusReason,
@@ -98,6 +98,7 @@ func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 		return nil
 	}
 	tw := tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
+	defer tw.Flush()
 	fmt.Fprintf(tw, "%s:\t%s\n", color.HiWhiteString("Stack"), color.CyanString(stack.ConfigName))
 	fmt.Fprintf(tw, "%s:\t%s\n", color.HiWhiteString("StackName"), stack.Name)
 	fmt.Fprintf(tw, "%s:\t%s %s\n", color.HiWhiteString("StackStatus"), outputStatus(stack.Status), stack.StatusReason)
@@ -207,6 +208,7 @@ func outputPlan(w io.Writer, plan *clon.Plan, typ int) error {
 	var sv = aws.StringValue
 
 	tw := tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
+	defer tw.Flush()
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("Stack"), color.CyanString(plan.Stack.ConfigName))
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("StackName"), plan.Stack.Name)
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("StackStatus"), outputStatus(plan.Stack.Status))
@@ -259,17 +261,14 @@ func outputPlan(w io.Writer, plan *clon.Plan, typ int) error {
 		}
 	}
 
-	tw.Flush()
-
 	return nil
 }
 
-func outputChangeSet(w io.Writer, cs *cfn.ChangeSetData, typ int) error {
+func outputChangeSet(_ io.Writer, cs *cfn.ChangeSetData, typ int) error {
 	if typ != outputTypeStatusLine {
 		return errors.Errorf("output type %d for change set is not implemented", typ)
 	}
-	fmt.Fprintf(w, "%s: changeset status - %s [%s] %s\n",
-		color.CyanString("info"),
+	log.Infof("changeset status - %s [%s] %s",
 		color.HiWhiteString(cs.Name),
 		outputStatus(cs.Status),
 		cs.StatusReason,
@@ -277,12 +276,11 @@ func outputChangeSet(w io.Writer, cs *cfn.ChangeSetData, typ int) error {
 	return nil
 }
 
-func outputStackEvent(w io.Writer, cs *cfn.StackEventData, typ int) error {
+func outputStackEvent(_ io.Writer, cs *cfn.StackEventData, typ int) error {
 	if typ != outputTypeStatusLine {
 		return errors.Errorf("output type %d for change set is not implemented", typ)
 	}
-	fmt.Fprintf(w, "%s: resource status - %s:%s (%s) - [%s] %s\n",
-		color.CyanString("info"),
+	log.Infof("resource status - %s:%s (%s) - [%s] %s",
 		color.HiWhiteString(cs.StackName),
 		color.HiWhiteString(cs.LogicalResourceID),
 		cs.ResourceType,

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/juju/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spirius/clon/pkg/clon"
 )
 
@@ -109,7 +110,16 @@ func (s *stackCmdHandler) init() (output, error) {
 	return newOutput(stack), nil
 }
 
+func (s *stackCmdHandler) verifyStackName(name string) error {
+	_, err := s.sm.Get(name)
+	return err
+}
+
 func (s *stackCmdHandler) plan(name string) (output, error) {
+	err := s.verifyStackName(name)
+	if err != nil {
+		return nil, errors.Annotatef(err, "cannot get stack")
+	}
 	if name != bootstrapStackName {
 		_, err := s.init()
 		if err != nil {
@@ -125,6 +135,10 @@ func (s *stackCmdHandler) plan(name string) (output, error) {
 	code := 0
 	if plan.HasChange {
 		code = 2
+	}
+
+	if code == 0 {
+		log.Infof("Stack '%s' does not contain changes", name)
 	}
 
 	return newOutput(plan).Short(), &errorCode{nil, code}
@@ -163,6 +177,11 @@ func (s *stackCmdHandler) destroy(name string) (output, error) {
 }
 
 func (s *stackCmdHandler) execute(name, planID string) (output, error) {
+	plan, err := s.sm.GetPlan(name, planID)
+	if err != nil {
+		return nil, errors.Annotatef(err, "cannot get plan '%s' for stack '%s'", planID, name)
+	}
+	newOutput(plan).Output(os.Stderr)
 	stack, err := s.sm.Execute(name, planID)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot execute plan '%s' on stack '%s'", planID, name)

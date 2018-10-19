@@ -58,7 +58,7 @@ var configFlags struct {
 	ignoreNestedUpdates bool
 }
 
-func stackResultHandler(out interface{}, err error) error {
+func cmdResultHandler(out interface{}, err error) error {
 	if out != nil {
 		switch res := out.(type) {
 		case output:
@@ -102,6 +102,7 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
+		log.SetFormatter(&logFormatter{})
 		if configFlags.debug {
 			log.SetLevel(log.DebugLevel)
 		}
@@ -144,7 +145,7 @@ func init() {
 		Args:  exactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			res, err := stackHandler.list()
-			return stackResultHandler(res, err)
+			return cmdResultHandler(res, err)
 		},
 	})
 
@@ -155,7 +156,7 @@ func init() {
 		Args:  exactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			res, err := stackHandler.status(args[0])
-			return stackResultHandler(res, errors.Trace(err))
+			return cmdResultHandler(res, errors.Trace(err))
 		},
 	})
 
@@ -166,7 +167,7 @@ func init() {
 		Args:  exactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			res, err := stackHandler.init()
-			return stackResultHandler(res, errors.Annotatef(err, "error while initializing"))
+			return cmdResultHandler(res, errors.Annotatef(err, "error while initializing"))
 		},
 	}
 	initCmd.PersistentFlags().BoolVarP(&configFlags.autoApprove, "auto-approve", "a", false, "Auto-approve changes")
@@ -194,7 +195,7 @@ If plan-id is specified, displays previously planned change.
 			} else {
 				res, err = stackHandler.planStatus(args[0], args[1])
 			}
-			return stackResultHandler(res, errors.Annotatef(err, "error while planning"))
+			return cmdResultHandler(res, errors.Annotatef(err, "error while planning"))
 		},
 	}
 	rootCmd.AddCommand(planCmd)
@@ -213,7 +214,7 @@ If plan-id is specified, displays previously planned change.
 		Args:  exactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			res, err := stackHandler.execute(args[0], args[1])
-			return stackResultHandler(res, errors.Annotatef(err, "error while executing"))
+			return cmdResultHandler(res, errors.Annotatef(err, "error while executing"))
 		},
 	})
 
@@ -226,7 +227,7 @@ This command requires interactive shell or -a flag to be specified.`,
 		Args: exactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			res, err := stackHandler.destroy(args[0])
-			return stackResultHandler(res, errors.Annotatef(err, "error while destroying"))
+			return cmdResultHandler(res, errors.Annotatef(err, "error while destroying"))
 		},
 	}
 	destroyCmd.PersistentFlags().BoolVarP(&configFlags.autoApprove, "auto-approve", "a", false, "Auto-approve changes")
@@ -241,7 +242,7 @@ This command requires interactive shell or -a flag to be specified.`,
 		Args: exactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			res, err := stackHandler.deploy(args[0])
-			return stackResultHandler(res, errors.Annotatef(err, "error while deploying"))
+			return cmdResultHandler(res, errors.Annotatef(err, "error while deploying"))
 		},
 	}
 	deployCmd.PersistentFlags().BoolVarP(&configFlags.autoApprove, "auto-approve", "a", false, "Auto-approve changes")
