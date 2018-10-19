@@ -28,6 +28,12 @@ func (l *logFormatter) Format(e *log.Entry) ([]byte, error) {
 	} else {
 		buf.WriteString(e.Message)
 	}
+	if stack, ok := e.Data["stack"]; ok {
+		if s, ok := stack.(string); ok {
+			buf.WriteString(" - ")
+			buf.WriteString(formatName(s))
+		}
+	}
 	buf.WriteByte('\n')
 	return buf.Bytes(), nil
 }

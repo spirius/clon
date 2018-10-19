@@ -31,20 +31,21 @@ func newStackCmdHandler(config clon.Config) (*stackCmdHandler, error) {
 }
 
 func (s *stackCmdHandler) verifyStack(name string) error {
+	log := log.WithFields(log.Fields{"stack": name})
 	if !configFlags.verifyParentStacks {
-		log.Infof("skipping parent stack verification - %s", name)
+		log.Info("skipping parent stack verification")
 		return nil
 	}
-	log.Infof("verifying parent stack - %s", name)
+	log.Info("verifying parent stack")
 	stack, updated, err := s.deployStack(name)
 	if err != nil {
-		return errors.Annotatef(err, "cannot verify stack '%s', deploy failed", name)
+		return errors.Annotatef(err, "cannot verify parent stack '%s', deploy failed", name)
 	}
 	if updated {
-		log.Infof("stack updated - %s", name)
+		log.Info("stack updated")
 		newOutput(stack).Output(os.Stderr)
 	} else {
-		log.Infof("parent stack %s does not contain changes", name)
+		log.Info("parent stack does not contain changes")
 	}
 	return nil
 }
@@ -76,6 +77,7 @@ func (s *stackCmdHandler) status(name string) (output, error) {
 }
 
 func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, bool, error) {
+	log := log.WithFields(log.Fields{"stack": name})
 	plan, err := s.sm.Plan(name)
 	if err != nil {
 		return nil, false, errors.Annotatef(err, "cannot plan stack '%s'", name)
@@ -138,7 +140,8 @@ func (s *stackCmdHandler) verifyStackName(name string) error {
 }
 
 func (s *stackCmdHandler) plan(name string) (output, error) {
-	log.Infof("planning stack %s", name)
+	log := log.WithFields(log.Fields{"stack": name})
+	log.Info("planning stack")
 	err := s.verifyStackName(name)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot get stack")
@@ -161,7 +164,7 @@ func (s *stackCmdHandler) plan(name string) (output, error) {
 	}
 
 	if code == 0 {
-		log.Infof("stack %s does not contain changes", name)
+		log.Info("stack does not contain changes")
 	}
 
 	return newOutput(plan).Short(), &errorCode{nil, code}

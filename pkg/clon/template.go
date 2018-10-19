@@ -32,7 +32,7 @@ func renderTemplate(content string, ctx interface{}, funcs map[string]interface{
 		e := recover()
 		if e != nil {
 			switch err := e.(type) {
-			case error:
+			case *errors.Err:
 				resErr = err
 			default:
 				panic(e)

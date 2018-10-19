@@ -40,7 +40,7 @@ type outputCommon struct {
 	typ  int
 }
 
-func outputStatus(s string) string {
+func formatStatus(s string) string {
 	if s == cloudformation.StackStatusRollbackInProgress {
 		return color.HiRedString(s)
 	} else if s == cloudformation.StackStatusRollbackComplete {
@@ -55,6 +55,10 @@ func outputStatus(s string) string {
 		return color.RedString(s)
 	}
 	return color.WhiteString(s)
+}
+
+func formatName(s string) string {
+	return color.HiWhiteString(s)
 }
 
 func (o *outputCommon) Short() output {
@@ -91,31 +95,31 @@ func (o *outputCommon) Output(w io.Writer) {
 func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 	if typ == outputTypeStatusLine {
 		log.Infof("stack status - %s [%s] %s",
-			color.HiWhiteString(stack.Name),
-			outputStatus(stack.Status),
+			formatName(stack.Name),
+			formatStatus(stack.Status),
 			stack.StatusReason,
 		)
 		return nil
 	}
 	tw := tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
 	defer tw.Flush()
-	fmt.Fprintf(tw, "%s:\t%s\n", color.HiWhiteString("Stack"), color.CyanString(stack.ConfigName))
-	fmt.Fprintf(tw, "%s:\t%s\n", color.HiWhiteString("StackName"), stack.Name)
-	fmt.Fprintf(tw, "%s:\t%s %s\n", color.HiWhiteString("StackStatus"), outputStatus(stack.Status), stack.StatusReason)
+	fmt.Fprintf(tw, "%s:\t%s\n", formatName("Stack"), color.CyanString(stack.ConfigName))
+	fmt.Fprintf(tw, "%s:\t%s\n", formatName("StackName"), stack.Name)
+	fmt.Fprintf(tw, "%s:\t%s %s\n", formatName("StackStatus"), formatStatus(stack.Status), stack.StatusReason)
 	if stack.Status != cfn.StackStatusNotFound {
-		fmt.Fprintf(tw, "%s:\t%s\n", color.HiWhiteString("Id"), stack.ID)
+		fmt.Fprintf(tw, "%s:\t%s\n", formatName("Id"), stack.ID)
 	}
 	if typ == outputTypeLong {
 		if len(stack.Parameters) > 0 {
-			fmt.Fprintf(tw, "%s:\n", color.HiWhiteString("Parameters"))
+			fmt.Fprintf(tw, "%s:\n", formatName("Parameters"))
 			for k, v := range stack.Parameters {
-				fmt.Fprintf(tw, "  %s:\t%q\n", color.HiWhiteString(k), v)
+				fmt.Fprintf(tw, "  %s:\t%q\n", formatName(k), v)
 			}
 		}
 		if len(stack.Outputs) > 0 {
-			fmt.Fprintf(tw, "%s:\n", color.HiWhiteString("Outputs"))
+			fmt.Fprintf(tw, "%s:\n", formatName("Outputs"))
 			for k, v := range stack.Outputs {
-				fmt.Fprintf(tw, "  %s:\t%q\n", color.HiWhiteString(k), v)
+				fmt.Fprintf(tw, "  %s:\t%q\n", formatName(k), v)
 			}
 		}
 	}
@@ -124,15 +128,15 @@ func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 
 func outputPlanResourceChangeDetailsSingle(tw io.Writer, name string, details []*cloudformation.ResourceChangeDetail) {
 	if name != "" {
-		fmt.Fprintf(tw, "  %s:\n", color.HiWhiteString(name))
+		fmt.Fprintf(tw, "  %s:\n", formatName(name))
 	}
 	for _, d := range details {
-		fmt.Fprintf(tw, "    %s: %s, ", color.HiWhiteString("ChangeSource"), aws.StringValue(d.ChangeSource))
+		fmt.Fprintf(tw, "    %s: %s, ", formatName("ChangeSource"), aws.StringValue(d.ChangeSource))
 
 		if d.CausingEntity != nil {
-			fmt.Fprintf(tw, "%s: %s, ", color.HiWhiteString("CausingEntity"), aws.StringValue(d.CausingEntity))
+			fmt.Fprintf(tw, "%s: %s, ", formatName("CausingEntity"), aws.StringValue(d.CausingEntity))
 		}
-		fmt.Fprintf(tw, "%s: %s", color.HiWhiteString("Evaluation"), aws.StringValue(d.Evaluation))
+		fmt.Fprintf(tw, "%s: %s", formatName("Evaluation"), aws.StringValue(d.Evaluation))
 
 		switch aws.StringValue(d.Target.RequiresRecreation) {
 		case cloudformation.RequiresRecreationAlways:
@@ -211,13 +215,13 @@ func outputPlan(w io.Writer, plan *clon.Plan, typ int) error {
 	defer tw.Flush()
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("Stack"), color.CyanString(plan.Stack.ConfigName))
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("StackName"), plan.Stack.Name)
-	fmt.Fprintf(tw, "%s:\t%s\n", cw("StackStatus"), outputStatus(plan.Stack.Status))
+	fmt.Fprintf(tw, "%s:\t%s\n", cw("StackStatus"), formatStatus(plan.Stack.Status))
 	if plan.Stack.Status != cfn.StackStatusNotFound {
 		fmt.Fprintf(tw, "%s:\t%s\n", cw("StackID"), plan.Stack.ID)
 	}
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("ChageSetID"), plan.ChangeSet.ID)
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("ChangeSetName"), plan.ChangeSet.Name)
-	fmt.Fprintf(tw, "%s:\t%s\n", cw("ExecutionStatus"), outputStatus(plan.ChangeSet.ExecutionStatus))
+	fmt.Fprintf(tw, "%s:\t%s\n", cw("ExecutionStatus"), formatStatus(plan.ChangeSet.ExecutionStatus))
 	fmt.Fprintf(tw, "%s:\t%s\n", cw("RoleARN"), plan.RoleARN.String())
 
 	if plan.Parameters.HasChange() {
@@ -269,8 +273,8 @@ func outputChangeSet(_ io.Writer, cs *cfn.ChangeSetData, typ int) error {
 		return errors.Errorf("output type %d for change set is not implemented", typ)
 	}
 	log.Infof("changeset status - %s [%s] %s",
-		color.HiWhiteString(cs.Name),
-		outputStatus(cs.Status),
+		formatName(cs.Name),
+		formatStatus(cs.Status),
 		cs.StatusReason,
 	)
 	return nil
@@ -281,10 +285,10 @@ func outputStackEvent(_ io.Writer, cs *cfn.StackEventData, typ int) error {
 		return errors.Errorf("output type %d for change set is not implemented", typ)
 	}
 	log.Infof("resource status - %s:%s (%s) - [%s] %s",
-		color.HiWhiteString(cs.StackName),
-		color.HiWhiteString(cs.LogicalResourceID),
+		formatName(cs.StackName),
+		formatName(cs.LogicalResourceID),
 		cs.ResourceType,
-		outputStatus(cs.ResourceStatus),
+		formatStatus(cs.ResourceStatus),
 		cs.ResourceStatusReason,
 	)
 	return nil
