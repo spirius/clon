@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/spirius/clon/internal/pkg/closer"
+	"github.com/spirius/clon/pkg/closer"
 
 	"github.com/juju/errors"
 	"github.com/stretchr/testify/require"
@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
-	mock "github.com/spirius/clon/internal/pkg/cfn/mock"
+	mock "github.com/spirius/clon/pkg/cfn/mock"
 )
 
 func TestStack_read_basic(t *testing.T) {

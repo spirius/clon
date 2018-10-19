@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spirius/clon/internal/pkg/closer"
+	"github.com/spirius/clon/pkg/closer"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/spirius/clon/internal/pkg/cfn"
+	"github.com/spirius/clon/pkg/cfn"
 	"github.com/spirius/clon/pkg/clon"
 
 	"github.com/aws/aws-sdk-go/aws"

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/spirius/clon/internal/pkg/cfn"
+	"github.com/spirius/clon/pkg/cfn"
 )
 
 // DiffString is helper type for tracking

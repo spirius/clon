@@ -3,7 +3,7 @@ package cfn
 import (
 	"time"
 
-	"github.com/spirius/clon/internal/pkg/closer"
+	"github.com/spirius/clon/pkg/closer"
 
 	"github.com/juju/errors"
 

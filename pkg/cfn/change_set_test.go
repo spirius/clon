@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
-	mock "github.com/spirius/clon/internal/pkg/cfn/mock"
+	mock "github.com/spirius/clon/pkg/cfn/mock"
 )
 
 func TestChangeSet_NewChangeSet_basic(t *testing.T) {

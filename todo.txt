@@ -1,6 +1,0 @@
-* Add README
-  * examples
-  * commands
-  * config
-  * files
-  * interpolation

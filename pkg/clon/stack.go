@@ -6,8 +6,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spirius/clon/internal/pkg/cfn"
-	"github.com/spirius/clon/internal/pkg/closer"
+	"github.com/spirius/clon/pkg/cfn"
+	"github.com/spirius/clon/pkg/closer"
 
 	"github.com/juju/errors"
 )

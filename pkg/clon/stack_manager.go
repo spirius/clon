@@ -6,8 +6,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/juju/errors"
-	"github.com/spirius/clon/internal/pkg/cfn"
-	"github.com/spirius/clon/internal/pkg/s3file"
+	"github.com/spirius/clon/pkg/cfn"
+	"github.com/spirius/clon/pkg/s3file"
 )
 
 // StackManager is high level API for managing AWS CloudFormation
