@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/juju/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spirius/clon/pkg/cfn"
 	"github.com/spirius/clon/pkg/s3file"
 )
@@ -28,7 +29,8 @@ type StackManager struct {
 	vars   map[string]string
 	files  map[string]*s3file.File
 
-	emit func(interface{})
+	emit   func(interface{})
+	verify func(string) error
 }
 
 // stackName returns the full stack name.
@@ -69,27 +71,27 @@ func (sm *StackManager) getStack(name string) (*stack, *StackConfig, error) {
 
 // renderStackData renders the StackData from config and uploads template to S3 bucket if needed.
 // In order for S3 upload to work, bucket field must be set by calling SetBucket.
-func (sm *StackManager) renderStackData(name string, stackConfig *StackConfig) (*StackData, error) {
+func (sm *StackManager) renderStackData(s *stack, stackConfig *StackConfig) (*StackData, error) {
 	var err error
 	sd := &StackData{
 		StackData: cfn.StackData{
-			Name:         sm.stackName(name),
+			Name:         sm.stackName(s.configName),
 			Parameters:   make(map[string]string, len(stackConfig.Parameters)),
 			Tags:         make(map[string]string, len(stackConfig.Tags)),
 			Capabilities: make([]string, len(stackConfig.Capabilities)),
 		},
 	}
 
-	if sd.StackData.RoleARN, err = sm.render(stackConfig.RoleARN); err != nil {
-		return nil, errors.Annotatef(err, "cannot render RoleARN of stack '%s'", name)
+	if sd.StackData.RoleARN, err = sm.render(s, stackConfig.RoleARN); err != nil {
+		return nil, errors.Annotatef(err, "cannot render RoleARN of stack '%s'", s.configName)
 	}
 
 	copy(sd.Capabilities, stackConfig.Capabilities)
-	if err := sm.renderMapToMap(stackConfig.Parameters, sd.Parameters); err != nil {
-		return nil, errors.Annotatef(err, "cannot render Parameters for stack '%s'", name)
+	if err := sm.renderMapToMap(s, stackConfig.Parameters, sd.Parameters); err != nil {
+		return nil, errors.Annotatef(err, "cannot render Parameters for stack '%s'", s.configName)
 	}
-	if err := sm.renderMapToMap(stackConfig.Tags, sd.Tags); err != nil {
-		return nil, errors.Annotatef(err, "cannot render Tags for stack '%s'", name)
+	if err := sm.renderMapToMap(s, stackConfig.Tags, sd.Tags); err != nil {
+		return nil, errors.Annotatef(err, "cannot render Tags for stack '%s'", s.configName)
 	}
 
 	if sm.bucket != "" {
@@ -100,14 +102,14 @@ func (sm *StackManager) renderStackData(name string, stackConfig *StackConfig) (
 			Source: stackConfig.Template,
 		})
 		if err != nil {
-			return nil, errors.Annotatef(err, "cannot upload template '%s' for stack '%s'", stackConfig.Template, name)
+			return nil, errors.Annotatef(err, "cannot upload template '%s' for stack '%s'", stackConfig.Template, s.configName)
 		}
 		sd.TemplateURL = tpl.URL
 	} else {
 		// should be used only for bootstrapping
 		content, err := ioutil.ReadFile(stackConfig.Template)
 		if err != nil {
-			return nil, errors.Annotatef(err, "cannot read template for stack '%s'", name)
+			return nil, errors.Annotatef(err, "cannot read template for stack '%s'", s.configName)
 		}
 		sd.TemplateBody = string(content)
 	}
@@ -116,9 +118,9 @@ func (sm *StackManager) renderStackData(name string, stackConfig *StackConfig) (
 
 // renderMapToMap renders each element of src and sets the result in dst with same key.
 // Argument maps must be initialized before calling this function.
-func (sm *StackManager) renderMapToMap(src map[string]string, dst map[string]string) error {
+func (sm *StackManager) renderMapToMap(s *stack, src map[string]string, dst map[string]string) error {
 	for k, v := range src {
-		value, err := sm.render(v)
+		value, err := sm.render(s, v)
 		if err != nil {
 			return errors.Annotatef(err, "cannot render value '%s' for key '%s' ", v, k)
 		}
@@ -129,28 +131,57 @@ func (sm *StackManager) renderMapToMap(src map[string]string, dst map[string]str
 
 // render will render the content as golang template using
 // context of StackManager.
-func (sm *StackManager) render(content string) (string, error) {
+func (sm *StackManager) render(s *stack, content string) (string, error) {
 	ctx := map[string]interface{}{
 		"Name": sm.name,
 		"Var":  sm.vars,
 		"File": sm.files,
 	}
-	return renderTemplate(content, ctx, map[string]interface{}{
-		"stack": sm.tplGetStackData,
-	})
+	funcs := map[string]interface{}{}
+	if s.configName != sm.config.RootStack {
+		funcs["stack"] = sm.tplGetStackData(s)
+	}
+	return renderTemplate(content, ctx, funcs)
 }
 
 // tplGetStackData is function exposed to template engine with name
-// GetStack.
-func (sm *StackManager) tplGetStackData(name string) (*StackData, error) {
-	stack, _, err := sm.getStack(name)
-	if err != nil {
-		return nil, errors.Annotatef(err, "cannot find stack '%s'", name)
+// 'stack'.
+func (sm *StackManager) tplGetStackData(child *stack) func(name string) (*StackData, error) {
+	return func(name string) (_ *StackData, err error) {
+		defer func() {
+			// we have to panic instead of returing error, to be able to catch the trace properly
+			if err != nil {
+				panic(err)
+			}
+		}()
+		var s *stack
+		// avoid self-references
+		if child.configName == name {
+			err = errors.Errorf("found self reference in stack '%s'", child.configName)
+			return
+		}
+		// find the stack
+		s, _, err = sm.getStack(name)
+		if err != nil {
+			err = errors.Annotatef(err, "cannot find stack '%s'", name)
+			return
+		}
+		// check for cyclic reference
+		if err = s.addChild(child); err != nil {
+			err = errors.Annotatef(err, "cannot add '%s' as child of '%s'", child.configName, s.configName)
+			return
+		}
+		// check if already updated
+		if s.updated || (s.planned && !s.hasChange) {
+			return s.stackData(), nil
+		}
+		// update stack if needed
+		if err = sm.verify(name); err != nil {
+			err = errors.Annotatef(err, "stack '%s' is not deployed", name)
+			return
+		}
+		return s.stackData(), nil
 	}
-	if !stack.exists() {
-		return nil, errors.Errorf("stack '%s' is not deployed", name)
-	}
-	return stack.stackData(), nil
 }
 
 // Plan creates plan of changes.
@@ -159,24 +190,26 @@ func (sm *StackManager) Plan(name string) (*Plan, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot plan stack '%s'", name)
 	}
-	stackData, err := sm.renderStackData(name, stackConfig)
+	stackData, err := sm.renderStackData(stack, stackConfig)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot plan '%s', stack input rendering failed", name)
 	}
 
 	cs, err := stack.plan(stackData)
 	if err != nil {
-		err = errors.Annotatef(err, "stack '%s' plan failed", name)
+		return nil, errors.Annotatef(err, "stack '%s' plan failed", name)
 	}
-	var plan *Plan
-	var err2 error
-	if cs != nil {
-		plan, err2 = newPlan(cs.Data(), stack.stackData(), sm.config.IgnoreNestedUpdates)
-		if err2 != nil {
-			return nil, errors.Trace(err2)
-		}
+
+	plan, err := newPlan(cs.Data(), stack.stackData(), sm.config.IgnoreNestedUpdates)
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
-	return plan, err
+
+	stack.planned = true
+	stack.hasChange = plan.HasChange
+	log.Debugf("stack %s plan complete, planned = %t, hasChange = %t", name, stack.planned, stack.hasChange)
+
+	return plan, nil
 }
 
 // GetPlan returns the Plan data.
@@ -206,6 +239,12 @@ func (sm *StackManager) GetPlan(name, planID string) (*Plan, error) {
 // each time some event in stack manager occures.
 func (sm *StackManager) SetEventHandler(fn func(interface{})) {
 	sm.emit = fn
+}
+
+// SetVerify sets the function which is called
+// each time dependent stack verification is needed.
+func (sm *StackManager) SetVerify(fn func(name string) error) {
+	sm.verify = fn
 }
 
 // SetBucket sets the bucket name which is used
@@ -241,6 +280,9 @@ func (sm *StackManager) Execute(name string, planID string) (*StackData, error) 
 		ID:        changeSetID,
 		StackData: &stack.stackData().StackData,
 	})
+	if err != nil {
+		stack.updated = true
+	}
 	return stack.stackData(), errors.Annotatef(err, "cannot execute change set '%s' for stack '%s'", changeSetID, name)
 }
 
@@ -298,6 +340,7 @@ func NewStackManager(config Config) (*StackManager, error) {
 		stacks:       make(map[string]*stack, len(config.Stacks)),
 		stackConfigs: make(map[string]*StackConfig, len(config.Stacks)),
 		emit:         func(interface{}) {},
+		verify:       func(name string) error { return nil },
 
 		vars:  make(map[string]string, len(config.Variables)),
 		files: make(map[string]*s3file.File, len(config.Files)),

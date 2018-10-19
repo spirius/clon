@@ -2,6 +2,7 @@ package clon
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +29,12 @@ type stack struct {
 
 	nestedStackLock     sync.Mutex
 	nestedStackTracking map[string]*closer.Closer
+
+	planned   bool
+	hasChange bool
+	updated   bool
+
+	children map[string]*stack
 }
 
 func newStack(sm *StackManager, stackName, configName string) (*stack, error) {
@@ -42,12 +49,9 @@ func newStack(sm *StackManager, stackName, configName string) (*stack, error) {
 		sm:         sm,
 
 		nestedStackTracking: make(map[string]*closer.Closer),
+		children:            make(map[string]*stack),
 	}
 	return s, nil
-}
-
-func (s *stack) exists() bool {
-	return s.stack != nil && s.stack.Data().Status != cfn.StackStatusNotFound
 }
 
 func (s *stack) stackData() *StackData {
@@ -68,6 +72,35 @@ func (s *stack) newChangeSetName() string {
 	return fmt.Sprintf("%s-%s-%s", s.name, s.sm.awsClient.sessionName, time.Now().Format("20060102030405"))
 }
 
+func (s *stack) addChild(child *stack) error {
+	if _, ok := s.children[child.configName]; ok {
+		return nil
+	}
+	chain := child.isChild(s.configName)
+	if chain != nil {
+		chain = append(chain, s.configName)
+		return errors.Errorf("cyclic dependency between stacks: %s", strings.Join(chain, " -> "))
+	}
+	s.children[child.configName] = child
+	return nil
+}
+
+func (s *stack) isChild(name string) []string {
+	for n, c := range s.children {
+		if n == name {
+			return []string{c.configName, s.configName}
+		}
+		r := c.isChild(name)
+		if r != nil {
+			return append(r, s.configName)
+		}
+	}
+	return nil
+}
+
+// plan create new change set on stack and waits until it finishes.
+// It might return both changeSet object and error in case if error
+// occurred while waiting.
 func (s *stack) plan(stackData *StackData) (*cfn.ChangeSet, error) {
 	csData := &cfn.ChangeSetData{
 		Name:      s.newChangeSetName(),

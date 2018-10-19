@@ -26,6 +26,7 @@ type Config struct {
 	Variables map[string]string
 
 	IgnoreNestedUpdates bool
+	RootStack           string
 }
 
 // StackConfig is the configuration of single stack.

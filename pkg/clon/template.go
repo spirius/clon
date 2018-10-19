@@ -20,7 +20,7 @@ func newTemplate(funcs map[string]interface{}) *template.Template {
 	return template.New("").Funcs(funcMap)
 }
 
-func renderTemplate(content string, ctx interface{}, funcs map[string]interface{}) (string, error) {
+func renderTemplate(content string, ctx interface{}, funcs map[string]interface{}) (_ string, resErr error) {
 	var buf bytes.Buffer
 	tpl, err := newTemplate(funcs).Parse(content)
 
@@ -28,7 +28,24 @@ func renderTemplate(content string, ctx interface{}, funcs map[string]interface{
 		return "", errors.Trace(err)
 	}
 
+	defer func() {
+		e := recover()
+		if e != nil {
+			switch err := e.(type) {
+			case error:
+				resErr = err
+			default:
+				panic(e)
+			}
+		} else {
+			resErr = err
+		}
+	}()
+
 	if err = tpl.Execute(&buf, ctx); err != nil {
+		if tplErr, ok := err.(template.ExecError); ok {
+			return "", errors.Wrapf(err, tplErr.Err, "error while executing template")
+		}
 		return buf.String(), errors.Trace(err)
 	}
 

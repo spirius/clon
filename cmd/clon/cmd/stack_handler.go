@@ -19,13 +19,34 @@ func newStackCmdHandler(config clon.Config) (*stackCmdHandler, error) {
 	s := &stackCmdHandler{}
 	config.Bootstrap.Name = bootstrapStackName
 	config.Stacks = append([]clon.StackConfig{config.Bootstrap}, config.Stacks...)
+	config.RootStack = bootstrapStackName
 	sm, err := clon.NewStackManager(config)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot create clon")
 	}
 	sm.SetEventHandler(s.eventHandler)
+	sm.SetVerify(s.verifyStack)
 	s.sm = sm
 	return s, nil
+}
+
+func (s *stackCmdHandler) verifyStack(name string) error {
+	if !configFlags.verifyParentStacks {
+		log.Infof("skipping parent stack verification - %s", name)
+		return nil
+	}
+	log.Infof("verifying parent stack - %s", name)
+	stack, updated, err := s.deployStack(name)
+	if err != nil {
+		return errors.Annotatef(err, "cannot verify stack '%s', deploy failed", name)
+	}
+	if updated {
+		log.Infof("stack updated - %s", name)
+		newOutput(stack).Output(os.Stderr)
+	} else {
+		log.Infof("parent stack %s does not contain changes", name)
+	}
+	return nil
 }
 
 // eventHandler outputs information about updates emitted from
@@ -65,6 +86,7 @@ func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, bool, error
 		if err = askForConfirmation("Do you want to apply these changes on stack?"); err != nil {
 			return nil, false, errors.Annotatef(err, "changes are not approved")
 		}
+		log.Infof("changes approved, starting plan execution for stack %s", name)
 		stack, err = s.sm.Execute(name, plan.ID)
 		if err != nil {
 			return nil, false, errors.Annotatef(err, "execution of stack '%s' failed", name)
@@ -116,6 +138,7 @@ func (s *stackCmdHandler) verifyStackName(name string) error {
 }
 
 func (s *stackCmdHandler) plan(name string) (output, error) {
+	log.Infof("planning stack %s", name)
 	err := s.verifyStackName(name)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot get stack")
@@ -138,7 +161,7 @@ func (s *stackCmdHandler) plan(name string) (output, error) {
 	}
 
 	if code == 0 {
-		log.Infof("Stack '%s' does not contain changes", name)
+		log.Infof("stack %s does not contain changes", name)
 	}
 
 	return newOutput(plan).Short(), &errorCode{nil, code}

@@ -21,7 +21,7 @@ var logLevelColor = map[log.Level]struct{ key, value *color.Color }{
 func (l *logFormatter) Format(e *log.Entry) ([]byte, error) {
 	var buf bytes.Buffer
 	c := logLevelColor[e.Level]
-	buf.WriteString(c.key.Sprint("info"))
+	buf.WriteString(c.key.Sprint(e.Level.String()))
 	buf.WriteString(": ")
 	if c.value != nil {
 		buf.WriteString(c.value.Sprint(e.Message))

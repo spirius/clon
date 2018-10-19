@@ -9,7 +9,6 @@ import (
 
 	"github.com/spirius/clon/pkg/clon"
 
-	"github.com/fatih/color"
 	"github.com/juju/errors"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -56,6 +55,8 @@ var configFlags struct {
 	configOverride string
 
 	ignoreNestedUpdates bool
+
+	verifyParentStacks bool
 }
 
 func cmdResultHandler(out interface{}, err error) error {
@@ -206,6 +207,13 @@ If plan-id is specified, displays previously planned change.
 		true,
 		"Do not consider stack changed, if only nested stack automatics updates are performed",
 	)
+	planCmd.PersistentFlags().BoolVarP(
+		&configFlags.verifyParentStacks,
+		"verify-parent-stacks",
+		"",
+		true,
+		"Check, if parent stacks are up-to-date",
+	)
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "execute {stack-name} {plan-id}",
@@ -252,6 +260,13 @@ This command requires interactive shell or -a flag to be specified.`,
 		"",
 		true,
 		"Do not consider stack changed, if only nested stack automatics updates are performed",
+	)
+	deployCmd.PersistentFlags().BoolVarP(
+		&configFlags.verifyParentStacks,
+		"verify-parent-stacks",
+		"",
+		true,
+		"Check, if parent stacks are up-to-date. Try to deploy if needed.",
 	)
 	rootCmd.AddCommand(deployCmd)
 
@@ -331,7 +346,7 @@ func Execute() {
 				fmt.Fprintf(&buf, "\nclon %s (commit %s)", Version, Revision)
 			}
 
-			fmt.Println(color.RedString("Error: %s", buf.String()))
+			log.Error(buf.String())
 		}
 		os.Exit(code)
 	}
