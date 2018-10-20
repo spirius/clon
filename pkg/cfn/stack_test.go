@@ -141,7 +141,7 @@ func TestStack_update_closer(t *testing.T) {
 	cl := closer.New()
 	go func() {
 		stack.update(StackWaitConfig{
-			Closer: &cl,
+			Closer: cl,
 			Callback: func(d *StackData) (bool, error) {
 				return true, nil
 			},
@@ -177,7 +177,7 @@ func TestStack_update_error1(t *testing.T) {
 
 	cl := closer.New()
 	err = stack.update(StackWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackData) (bool, error) {
 			return true, nil
 		},
@@ -203,7 +203,7 @@ func TestStack_update_error2(t *testing.T) {
 
 	cl := closer.New()
 	err = stack.update(StackWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackData) (bool, error) {
 			return false, experr
 		},
@@ -233,7 +233,7 @@ func TestStack_Wait_closeOnEnd(t *testing.T) {
 
 	cl := closer.New()
 	stack.Wait(StackWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackData) (bool, error) {
 			return false, nil
 		},
@@ -263,7 +263,7 @@ func TestStack_Wait_closeOnError(t *testing.T) {
 
 	cl := closer.New()
 	stack.Wait(StackWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackData) (bool, error) {
 			return false, experr
 		},
@@ -305,7 +305,7 @@ func TestStack_Destroy(t *testing.T) {
 
 	cl := closer.New()
 	stack.Wait(StackWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackData) (bool, error) {
 			return d.Status != StackStatusNotFound, nil
 		},

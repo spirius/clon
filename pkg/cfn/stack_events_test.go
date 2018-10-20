@@ -99,7 +99,7 @@ func TestStackEvents_NewStackEvents_basic(t *testing.T) {
 
 	go func() {
 		cl.Close(se.update(StackEventsWaitConfig{
-			Closer: &cl,
+			Closer: cl,
 			Callback: func(d *StackEventData) (bool, error) {
 				if d.EventID == "e5" {
 					wg.Done()
@@ -158,7 +158,7 @@ func TestStackEvents_update_closer(t *testing.T) {
 
 	go func() {
 		se.update(StackEventsWaitConfig{
-			Closer: &cl,
+			Closer: cl,
 			Callback: func(d *StackEventData) (bool, error) {
 				return true, nil
 			},
@@ -193,7 +193,7 @@ func TestStackEvents_update_error1(t *testing.T) {
 	cl := closer.New()
 
 	err = se.update(StackEventsWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackEventData) (bool, error) {
 			return true, nil
 		},
@@ -222,7 +222,7 @@ func TestStackEvents_update_error2(t *testing.T) {
 
 	cl := closer.New()
 	err = se.update(StackEventsWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackEventData) (bool, error) {
 			return false, experr
 		},
@@ -243,7 +243,7 @@ func TestStackEvents_Wait_closeOnEnd(t *testing.T) {
 
 	cl := closer.New()
 	se.Wait(StackEventsWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackEventData) (bool, error) {
 			return false, nil
 		},
@@ -272,7 +272,7 @@ func TestStackEvents_Wait_closeOnError(t *testing.T) {
 
 	cl := closer.New()
 	se.Wait(StackEventsWaitConfig{
-		Closer: &cl,
+		Closer: cl,
 		Callback: func(d *StackEventData) (bool, error) {
 			return false, experr
 		},

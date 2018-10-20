@@ -16,8 +16,8 @@ type Closer struct {
 }
 
 // New creates new Closer.
-func New() Closer {
-	return Closer{
+func New() *Closer {
+	return &Closer{
 		ch: make(chan bool),
 	}
 }
@@ -67,12 +67,15 @@ func (c *Closer) propagate() {
 // close the child as well.
 func (c *Closer) Child() *Closer {
 	child := New()
-	c.AddChild(&child)
-	return &child
+	c.AddChild(child)
+	return child
 }
 
 // AddChild add the child to this closer.
 func (c *Closer) AddChild(child *Closer) {
+	if child == c {
+		return
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.closed {

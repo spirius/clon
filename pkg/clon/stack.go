@@ -126,7 +126,7 @@ func (s *stack) plan(stackData *StackData) (*cfn.ChangeSet, error) {
 			}
 			return false, nil
 		},
-		Closer:       &cl,
+		Closer:       cl,
 		CloseOnError: true,
 		CloseOnEnd:   true,
 	})
@@ -205,17 +205,17 @@ func (s *stack) trackUpdates(fn func(stack *cfn.StackData) (bool, error)) *close
 			}
 			return retry, errors.Trace(err)
 		},
-		Closer:       &cl,
+		Closer:       cl,
 		CloseOnError: true,
 		CloseOnEnd:   true,
 	})
 
-	err := s.trackStackEvents(s.name, &cl)
+	err := s.trackStackEvents(s.name, cl)
 	if err != nil {
 		log.Errorf("cannot track stack events: %s", err)
 	}
 
-	return &cl
+	return cl
 }
 
 func (s *stack) getChangeSet(csData *cfn.ChangeSetData) (*cfn.ChangeSet, error) {
