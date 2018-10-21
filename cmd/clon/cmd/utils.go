@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/fatih/color"
 	"github.com/juju/errors"
@@ -17,7 +16,7 @@ func askForConfirmation(msg string) error {
 	}
 	for {
 		var res string
-		fmt.Fprintf(os.Stderr, "\n%s", color.RedString("%s [yes/no]: ", msg))
+		fmt.Fprintf(stderr, "\n%s", color.RedString("%s [yes/no]: ", msg))
 		_, err := fmt.Scanln(&res)
 		if err != nil {
 			if err.Error() == "unexpected newline" {

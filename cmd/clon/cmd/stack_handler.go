@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spirius/clon/pkg/clon"
@@ -43,7 +41,7 @@ func (s *stackCmdHandler) verifyStack(name string) error {
 	}
 	if updated {
 		log.Info("stack updated")
-		newOutput(stack).Output(os.Stderr)
+		newOutput(stack).Output(stderr)
 	} else {
 		log.Info("parent stack does not contain changes")
 	}
@@ -53,7 +51,7 @@ func (s *stackCmdHandler) verifyStack(name string) error {
 // eventHandler outputs information about updates emitted from
 // cloudformation updates.
 func (s *stackCmdHandler) eventHandler(event interface{}) {
-	newOutput(event).StatusLine().Output(os.Stderr)
+	newOutput(event).StatusLine().Output(stderr)
 }
 
 func (s *stackCmdHandler) list() ([]output, error) {
@@ -84,7 +82,7 @@ func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, bool, error
 	}
 	stack := plan.Stack
 	if plan.HasChange {
-		newOutput(plan).Output(os.Stderr)
+		newOutput(plan).Output(stderr)
 		if err = askForConfirmation("Do you want to apply these changes on stack?"); err != nil {
 			return nil, false, errors.Annotatef(err, "changes are not approved")
 		}
@@ -117,7 +115,7 @@ func (s *stackCmdHandler) init() (output, error) {
 	}
 
 	if hasChange {
-		newOutput(stack).Output(os.Stderr)
+		newOutput(stack).Output(stderr)
 	}
 
 	bucket, ok := stack.Outputs["Bucket"]
@@ -157,7 +155,7 @@ func (s *stackCmdHandler) plan(name string) (output, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot plan stack '%s'", name)
 	}
-	newOutput(plan).Output(os.Stderr)
+	newOutput(plan).Output(stderr)
 	code := 0
 	if plan.HasChange {
 		code = 2
@@ -175,7 +173,7 @@ func (s *stackCmdHandler) planStatus(name, planID string) (output, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot get plan '%s', stack '%s'", planID, name)
 	}
-	newOutput(plan).Output(os.Stderr)
+	newOutput(plan).Output(stderr)
 	code := 0
 	if plan.HasChange {
 		code = 2
@@ -188,7 +186,7 @@ func (s *stackCmdHandler) destroy(name string) (output, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot get stack '%s'", name)
 	}
-	stackStatus.Output(os.Stderr)
+	stackStatus.Output(stderr)
 
 	if err = askForConfirmation("Are you sure you want to destroy this stack?"); err != nil {
 		return nil, errors.Annotatef(err, "changes are not approved")
@@ -207,7 +205,7 @@ func (s *stackCmdHandler) execute(name, planID string) (output, error) {
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot get plan '%s' for stack '%s'", planID, name)
 	}
-	newOutput(plan).Output(os.Stderr)
+	newOutput(plan).Output(stderr)
 	stack, err := s.sm.Execute(name, planID)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot execute plan '%s' on stack '%s'", planID, name)

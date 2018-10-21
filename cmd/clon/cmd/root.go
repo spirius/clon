@@ -9,6 +9,7 @@ import (
 
 	"github.com/spirius/clon/pkg/clon"
 
+	"github.com/fatih/color"
 	"github.com/juju/errors"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -59,14 +60,17 @@ var configFlags struct {
 	verifyParentStacks bool
 }
 
+var stdout = color.Output
+var stderr = color.Error
+
 func cmdResultHandler(out interface{}, err error) error {
 	if out != nil {
 		switch res := out.(type) {
 		case output:
-			res.Output(os.Stdout)
+			res.Output(stdout)
 		case []output:
 			for _, r := range res {
-				r.Output(os.Stdout)
+				r.Output(stdout)
 				fmt.Printf("\n")
 			}
 		default:
@@ -104,6 +108,7 @@ var rootCmd = &cobra.Command{
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		log.SetFormatter(&logFormatter{})
+		log.SetOutput(stderr)
 		if configFlags.debug {
 			log.SetLevel(log.DebugLevel)
 		}
@@ -323,7 +328,7 @@ func Execute() {
 		}
 
 		if e, ok := err.(argsError); ok {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", e)
+			fmt.Fprintf(stderr, "Error: %s\n", e)
 			e.cmd.Usage()
 			os.Exit(1)
 			return
@@ -336,7 +341,7 @@ func Execute() {
 		}
 
 		if err != nil && code == 0 {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(stderr, err)
 		} else if err != nil {
 			var buf bytes.Buffer
 			fmt.Fprintf(&buf, "%s", err)
