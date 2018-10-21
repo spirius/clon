@@ -24,8 +24,11 @@ jobs:
     - make tools
     - make lint
   - script: make coverage
+
   - stage: deploy
-    script: make compile
+    script:
+    - make tools
+    - make compile
     before_deploy:
     - chmod +x dist/*
     - test "`dist/clon_linux_amd64 version`" == "clon ${TRAVIS_TAG}"
