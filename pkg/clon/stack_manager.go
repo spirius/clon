@@ -135,11 +135,20 @@ func (sm *StackManager) render(s *stack, content string) (string, error) {
 	ctx := map[string]interface{}{
 		"Name": sm.name,
 		"Var":  sm.vars,
-		"File": sm.files,
 	}
-	funcs := map[string]interface{}{}
-	if s.configName != sm.config.RootStack {
-		funcs["stack"] = sm.tplGetStackData(s)
+	funcs := make(map[string]interface{})
+	if s != nil {
+		if s.configName != sm.config.RootStack {
+			funcs["stack"] = sm.tplGetStackData(s)
+			ctx["File"] = sm.files
+		}
+	}
+	if s == nil || s.configName != sm.config.RootStack {
+		bootstrap, _, err := sm.getStack(sm.config.RootStack)
+		if err != nil {
+			return "", errors.Annotatef(err, "cannot render, error while reading bootstrap stack")
+		}
+		ctx["Bootstrap"] = bootstrap.stackData()
 	}
 	return renderTemplate(content, ctx, funcs)
 }
@@ -310,19 +319,42 @@ func (sm *StackManager) Destroy(name string) (*StackData, error) {
 // SyncFiles synchronizes the files from local
 // system to S3 bucket.
 func (sm *StackManager) SyncFiles() error {
+	var file *s3file.File
+	var err error
 	for k, f := range sm.fileConfigs {
 		config := s3file.Config{
 			Region: sm.awsClient.region,
-			Bucket: f.Bucket,
-			Source: f.Src,
-			Key:    f.Key,
 		}
-		if config.Bucket == "" {
+		// render file config
+		if f.Bucket == "" {
 			config.Bucket = sm.bucket
+		} else {
+			config.Bucket, err = sm.render(nil, f.Bucket)
+			if err != nil {
+				return errors.Annotatef(err, "cannot sync files, bucket name rendering failed for file '%s'", k)
+			}
 		}
-		file, err := s3file.Write(sm.awsClient.s3conn, config)
+		config.Key, err = sm.render(nil, f.Key)
 		if err != nil {
-			return errors.Annotatef(err, "cannot upload file '%s'", k)
+			return errors.Annotatef(err, "cannot sync files, bucket key rendering failed for file '%s'", k)
+		}
+		config.Source, err = sm.render(nil, f.Src)
+		if err != nil {
+			return errors.Annotatef(err, "cannot sync files, file source rendering failed for file '%s'", k)
+		}
+		// read or write the file
+		if config.Source == "" {
+			file, err = s3file.Read(sm.awsClient.s3conn, config)
+			if err != nil {
+				return errors.Annotatef(err, "cannot read file '%s' from s3", k)
+			}
+			// Discard the content
+			file.Body.Close()
+		} else {
+			file, err = s3file.Write(sm.awsClient.s3conn, config)
+			if err != nil {
+				return errors.Annotatef(err, "cannot upload file '%s' to s3", k)
+			}
 		}
 		sm.files[k] = file
 	}
