@@ -136,7 +136,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&configFlags.debug, "debug", "d", false, "Enable debug mode")
 	rootCmd.PersistentFlags().BoolVarP(&configFlags.trace, "trace", "t", false, "Enable error tracing output")
 	rootCmd.PersistentFlags().BoolVarP(&configFlags.input, "input", "i", terminal.IsTerminal(int(os.Stdin.Fd())), "User input availability. If not specified, value is identified from terminal.")
-	rootCmd.PersistentFlags().StringVarP(&configFlags.config, "config", "c", "config.yml", "Config file")
+	rootCmd.PersistentFlags().StringVarP(&configFlags.config, "config", "c", "clon.yml", "Config file")
 	rootCmd.PersistentFlags().StringVarP(&configFlags.configOverride, "config-override", "e", "", "Override config file")
 
 	rootCmd.AddCommand(&cobra.Command{
