@@ -92,6 +92,21 @@ func (o *outputCommon) Output(w io.Writer) {
 	}
 }
 
+func outputStringMap(w io.Writer, name string, m map[string]string) {
+	if len(m) == 0 {
+		return
+	}
+	fmt.Fprintf(w, "%s:\n", formatName(name))
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(w, "  %s:\t%q\n", formatName(k), m[k])
+	}
+}
+
 func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 	if typ == outputTypeStatusLine {
 		log.Infof("stack status - %s [%s] %s",
@@ -110,18 +125,8 @@ func outputStack(w io.Writer, stack *clon.StackData, typ int) error {
 		fmt.Fprintf(tw, "%s:\t%s\n", formatName("Id"), stack.ID)
 	}
 	if typ == outputTypeLong {
-		if len(stack.Parameters) > 0 {
-			fmt.Fprintf(tw, "%s:\n", formatName("Parameters"))
-			for k, v := range stack.Parameters {
-				fmt.Fprintf(tw, "  %s:\t%q\n", formatName(k), v)
-			}
-		}
-		if len(stack.Outputs) > 0 {
-			fmt.Fprintf(tw, "%s:\n", formatName("Outputs"))
-			for k, v := range stack.Outputs {
-				fmt.Fprintf(tw, "  %s:\t%q\n", formatName(k), v)
-			}
-		}
+		outputStringMap(tw, "Parameters", stack.Parameters)
+		outputStringMap(tw, "Outputs", stack.Outputs)
 	}
 	return nil
 }
