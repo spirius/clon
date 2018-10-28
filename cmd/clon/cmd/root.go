@@ -22,7 +22,7 @@ import (
 var Revision = ""
 
 // Version is the version of the curren build.
-var Version = "v0.0.1"
+var Version = "v0.0.2"
 
 type errorCode struct {
 	err  error
