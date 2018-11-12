@@ -97,7 +97,10 @@ func (s *stackCmdHandler) deployStack(name string) (*clon.StackData, bool, error
 
 func (s *stackCmdHandler) deploy(name string) (output, error) {
 	if name != bootstrapStackName {
-		s.init()
+		_, err := s.init()
+		if err != nil {
+			return nil, errors.Annotatef(err, "cannot deploy stack, init failed")
+		}
 	}
 	stack, _, err := s.deployStack(name)
 	if err != nil {

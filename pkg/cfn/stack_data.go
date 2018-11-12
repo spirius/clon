@@ -57,7 +57,7 @@ func (sd StackData) IsFailed() bool {
 
 // IsRollback indicates if stack is in any rollback state.
 func (sd StackData) IsRollback() bool {
-	return strings.HasPrefix(sd.Status, "ROLLBACK_")
+	return strings.Contains(sd.Status, "_ROLLBACK_")
 }
 
 // Exists indicates if stack exists.
