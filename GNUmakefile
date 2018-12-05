@@ -25,6 +25,13 @@ tools: ## install tools
 vendor-status: ## check vendor files
 	GO111MODULE=on go mod verify
 
+test-version:
+	$(eval TAG := $(shell git describe --abbrev=0 --tags))
+	$(eval CODE_VERSION := $(shell go run cmd/clon/main.go version))
+	@if test "clon $(TAG)" != "$(CODE_VERSION)"; then \
+		echo "The tagged version ($(TAG)) and Version in cmd/clon/main.go ($(CODE_VERSION)) are not equal"; \
+	fi
+
 compile: ## compile
 	gox -os="linux darwin windows" \
 	  -arch="amd64" \
@@ -32,4 +39,4 @@ compile: ## compile
 	  -ldflags '-X github.com/spirius/clon/cmd/clon/cmd.Revision=$(REV) -extldflags "-static"' \
 	  -verbose ./cmd/clon
 
-.PHONY: lint test tools vendor-status help
+.PHONY: lint test test-version tools vendor-status help

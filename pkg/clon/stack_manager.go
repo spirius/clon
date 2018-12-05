@@ -389,7 +389,13 @@ func NewStackManager(config Config) (*StackManager, error) {
 	sm.awsClient = awsClient
 
 	for k, v := range config.Variables {
-		sm.vars[k] = v
+		sm.vars[k], err = renderTemplate(v, map[string]interface{}{
+			"Name": sm.name,
+			"Var":  sm.vars,
+		}, nil)
+		if err != nil {
+			return nil, errors.Annotatef(err, "cannot render variable %s = %s", k, v)
+		}
 	}
 	sm.fileConfigs = config.Files
 

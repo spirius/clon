@@ -22,7 +22,7 @@ import (
 var Revision = ""
 
 // Version is the version of the curren build.
-var Version = "v0.0.3"
+var Version = "v0.0.4"
 
 type errorCode struct {
 	err  error
@@ -244,7 +244,11 @@ This command requires interactive shell or -a flag to be specified.`,
 		Args:              exactArgs(0),
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error { return nil },
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Printf("clon %s\n", Version)
+			if configFlags.debug {
+				fmt.Printf("clon %s (commit #%s)\n", Version, Revision)
+			} else {
+				fmt.Printf("clon %s\n", Version)
+			}
 			return nil
 		},
 	})
