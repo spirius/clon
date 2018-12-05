@@ -129,13 +129,19 @@ func (sm *StackManager) renderMapToMap(s *stack, src map[string]string, dst map[
 	return nil
 }
 
+func (sm *StackManager) getTemplateCtx() map[string]interface{} {
+	return map[string]interface{}{
+		"Name":      sm.name,
+		"Var":       sm.vars,
+		"AccountId": sm.config.AccountID,
+		"Region":    sm.awsClient.region,
+	}
+}
+
 // render will render the content as golang template using
 // context of StackManager.
 func (sm *StackManager) render(s *stack, content string) (string, error) {
-	ctx := map[string]interface{}{
-		"Name": sm.name,
-		"Var":  sm.vars,
-	}
+	ctx := sm.getTemplateCtx()
 	funcs := make(map[string]interface{})
 	if s != nil {
 		if s.configName != sm.config.RootStack {
@@ -389,10 +395,7 @@ func NewStackManager(config Config) (*StackManager, error) {
 	sm.awsClient = awsClient
 
 	for k, v := range config.Variables {
-		sm.vars[k], err = renderTemplate(v, map[string]interface{}{
-			"Name": sm.name,
-			"Var":  sm.vars,
-		}, nil)
+		sm.vars[k], err = renderTemplate(v, sm.getTemplateCtx(), nil)
 		if err != nil {
 			return nil, errors.Annotatef(err, "cannot render variable %s = %s", k, v)
 		}

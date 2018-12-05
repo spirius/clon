@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/spirius/clon/pkg/clon"
 
+	"github.com/Masterminds/semver"
 	"github.com/fatih/color"
+	"github.com/google/go-github/github"
 	"github.com/juju/errors"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -22,7 +25,9 @@ import (
 var Revision = ""
 
 // Version is the version of the curren build.
-var Version = "v0.0.4"
+var Version = "v0.0.5"
+
+var currentVersion = semver.MustParse(Version)
 
 type errorCode struct {
 	err  error
@@ -93,6 +98,28 @@ var rootCmd = &cobra.Command{
 		if configFlags.debug {
 			log.SetLevel(log.DebugLevel)
 		}
+
+		githubClient := github.NewClient(nil)
+		ctx := context.Background()
+		release, _, err := githubClient.Repositories.GetLatestRelease(ctx, "spirius", "clon")
+		if err != nil {
+			log.Warnf("cannot verify latest release version: %s", err)
+		}
+
+		if release.TagName == nil {
+			log.Warnf("no release version information available")
+		} else if *release.TagName != Version {
+			relVer, err := semver.NewVersion(*release.TagName)
+			if err != nil {
+				log.Warnf("cannot parse release version: %s", err)
+			} else if currentVersion.Compare(relVer) < 0 {
+				log.Warnf(`newer version of clon (%s) is available, your version is %s, `+
+					`please update to the latest version: `+
+					`https://github.com/spirius/clon/releases/latest`,
+					*release.TagName, Version)
+			}
+		}
+
 		c, err := os.Open(configFlags.config)
 		if err != nil {
 			return errors.Annotatef(err, "cannot open config")
