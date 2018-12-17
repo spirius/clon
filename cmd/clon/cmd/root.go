@@ -25,7 +25,7 @@ import (
 var Revision = ""
 
 // Version is the version of the curren build.
-var Version = "v0.0.5"
+var Version = "v0.0.6"
 
 var currentVersion = semver.MustParse(Version)
 
@@ -104,9 +104,7 @@ var rootCmd = &cobra.Command{
 		release, _, err := githubClient.Repositories.GetLatestRelease(ctx, "spirius", "clon")
 		if err != nil {
 			log.Warnf("cannot verify latest release version: %s", err)
-		}
-
-		if release.TagName == nil {
+		} else if release.TagName == nil {
 			log.Warnf("no release version information available")
 		} else if *release.TagName != Version {
 			relVer, err := semver.NewVersion(*release.TagName)
@@ -154,7 +152,7 @@ func flagIgnoreNestedUpdates(cmd *cobra.Command) {
 		&configFlags.ignoreNestedUpdates,
 		"ignore-nested-updates",
 		"",
-		true,
+		false,
 		"Do not consider stack changed, if only nested stack automatics updates are performed",
 	)
 }

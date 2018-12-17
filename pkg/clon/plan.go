@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/spirius/clon/pkg/cfn"
 )
 
@@ -106,6 +107,8 @@ func newPlan(cs *cfn.ChangeSetData, stack *StackData, ignoreNestedUpdates bool) 
 				break
 			}
 		}
+	} else {
+		p.HasChange = p.ChangeSet.ExecutionStatus == cloudformation.ExecutionStatusAvailable
 	}
 
 	return p, nil
